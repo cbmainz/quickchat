@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Quickchat</title>
+	<meta charset="utf-8">
+	<meta name="robots" content="noindex, nofollow">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+		
+	<!-- pubnub -->
+	<script src="http://cdn.pubnub.com/pubnub.min.js"></script>
+	
+	<!-- jquery -->
+	<script src="http://code.jquery.com/jquery-latest.min.js"></script>
+	
+	<!-- bootstrap -->
+	<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+	<link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
+	
+	<!-- fontawesome -->
+	<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+		
+	<style type="text/css">
+		.fa {
+			margin-right: 4px; 
+		}
+	</style>
+	
+	<script type="text/javascript">
+	
+		var username;
+		var pubnub;
+	
+		$(document).ready(function()
+		{
+			// when the user enters in their username
+			$('#enterform').submit(function (e) 
+			{
+				// prevents the page from refreshing
+				e.preventDefault();
+				
+				// check for a username
+				if ($('#username').val() != '') 
+				{
+					// assigns the username variable to what was typed into the form
+					username = $('#username').val();
+					
+					// clear the username field
+					$('#username').val('');
+				} else {
+					// assign a generic username - this is not a good way to do this, btw
+					username = 'Anonymous';
+				}
+				
+				// show the chatroom div
+				$('#enterscreen').hide();
+				$('#chatscreen').show();
+				
+				// initialize pubnub (replace the keys below with your own)
+				pubnub = PUBNUB.init(
+				{
+					publish_key   : 'your_publish_key',
+					subscribe_key : 'your_subscribe_key',
+					uuid: username
+				});
+				
+				// subscribe to a chatroom channel
+				pubnub.subscribe(
+				{
+		         	channel : "chat",
+		         	message: handleMessage,
+		         	presence: function(data) 
+		         	{
+						// when a user joins the chatroom (requires presence to be turned on)
+						if(data.action == "join") 
+						{
+							$('#users').append($('<p id="' + data.uuid + '">' +  '<i class="fa fa-user text-primary"></i><span class="text-muted">' + data.uuid + '</span></p>'));
+						}
+						 
+						// when a user leaves the chatroom (requires presence to be turned on)
+						if(data.action == "leave" || data.action == "timeout") 
+						{
+							$('#' + data.uuid).remove();
+						}
+					}
+		        });
+			});
+			
+			// when a user posts a chat message
+			$('#chatform').submit(function(e) 
+			{
+				// prevents the page from refreshing
+				e.preventDefault();
+				
+				// if the message isn't empty
+				if ($('#message').val() != '') 
+				{
+					// publish the message to everyone in the chatroom
+					pubnub.publish(
+					{
+						channel: 'chat',
+						message: {
+							username: username,
+							text: $('#message').val()
+						}
+					});
+ 
+					// clear the message field
+					$('#message').val('');
+				}
+			});
+
+		});
+		
+		// when a message is received
+		function handleMessage(message) 
+		{
+			// add the message to the messages div
+			$('#messages').append('<p>' + '<span class="text-primary"><i class="fa fa-comment"></i>' + message.username + ':</span> <span class="text-muted">' + message.text + '</span></p>');
+			
+			// automatically scroll the div
+			$('#messages').scrollTop(250);
+		};
+	
+	</script>
+</head>
+<body>
+	<div class="container">
+		<div class="header">
+			<h2 class="text-primary" style="padding-bottom:15px"><i class="fa fa-comments-o fa-lg"></i>Schnell mal miteinander schreiben!</h2>
+		</div>
+		
+	<!-- enter username form -->
+	<div id="enterscreen">
+		<form id="enterform">
+			<div class="form-group">
+			<input id="username" name="username" type="text" placeholder="Nickname wählen!" />
+			</div>
+			<input id="enterbtn" type="submit" class="btn btn-primary" value="Los" />
+		</form>
+	</div>
+
+	<!-- chatroom -->
+	<div id="chatscreen" style="display: none">
+		
+		<!-- message form -->
+		<form id="chatform">
+			<div class="form-group">
+			<input id="message" name="message" type="text" placeholder="Was willst du schreiben?" />
+			</div>
+			<input id="chatbtn" type="submit" class="btn btn-primary" value="Senden" />
+		</form>
+		
+		<br /><br />
+		
+		<!-- display messages -->
+		<div class="panel panel-primary">
+  			<div class="panel-heading">
+   				<h3 class="panel-title">Nachrichten</h3>
+  			</div>
+  			<div id="messages" class="panel-body">
+  			</div>
+		</div>
+		
+		<!-- display users -->
+		<div class="panel panel-primary">
+  			<div class="panel-heading">
+   				<h3 class="panel-title">Benutzer*innen</h3>
+  			</div>
+  			<div id="users" class="panel-body">
+  			</div>
+		</div>
+
+	</div>
+	</div>
+</body>
+</html>
+
+
+
